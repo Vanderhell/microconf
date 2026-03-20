@@ -1,0 +1,50 @@
+# Build artifacts
+build/
+dist/
+out/
+bin/
+obj/
+Debug/
+Release/
+
+# C and test binaries
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+*.pdb
+*.ilk
+tests/test_all
+tests/test_all.exe
+
+# Coverage and profiling
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+coverage/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vs/
+.idea/
+.vscode/
+*.user
+*.sln.docstates
+
+# Local environment
+.env
+.env.*
+
+# Accidental/generated local directory
+{docs,include,src,tests}/
+git.txt
