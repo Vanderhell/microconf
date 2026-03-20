@@ -1,6 +1,6 @@
 # microconf
 
-[![CI](https://github.com/Vanderhell/microconf/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanderhell/microconf/actions/workflows/ci.yml)
+[![CI](https://github.com/Vanderhell/microconf/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Vanderhell/microconf/actions/workflows/ci.yml?query=branch%3Amaster)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![C99](https://img.shields.io/badge/language-C99-blue.svg)](#)
 [![Docs](https://img.shields.io/badge/docs-complete-black.svg)](docs/API_REFERENCE.md)
