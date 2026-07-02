@@ -1,0 +1,11 @@
+add_executable(microconf_cpp11 consumer_cpp11.cpp)
+target_link_libraries(microconf_cpp11 PRIVATE microconf::microconf)
+set_target_properties(microconf_cpp11 PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES)
+
+add_executable(microconf_cpp17 consumer_cpp17.cpp)
+target_link_libraries(microconf_cpp17 PRIVATE microconf::microconf)
+set_target_properties(microconf_cpp17 PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+add_executable(microconf_cpp20 consumer_cpp20.cpp)
+target_link_libraries(microconf_cpp20 PRIVATE microconf::microconf)
+set_target_properties(microconf_cpp20 PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED YES)

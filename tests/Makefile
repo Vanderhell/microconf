@@ -1,15 +1,22 @@
-CC      ?= gcc
-CFLAGS  := -std=c99 -Wall -Wextra -Wpedantic -Werror -I../include
-SRC     := ../src/mconf.c
-TESTS   := test_all.c
+CC ?= cc
+CPPFLAGS ?=
+CFLAGS ?=
+LDFLAGS ?=
+
+CPPFLAGS += -I../include
+CFLAGS += -std=c99 -Wall -Wextra -Wpedantic
+
+SRC = ../src/mconf.c
+TEST = test_all.c
+BIN = test_all
 
 .PHONY: all clean
 
-all: test_all
-	@./test_all
+all: $(BIN)
+	./$(BIN)
 
-test_all: $(TESTS) $(SRC) ../include/mconf.h
-	$(CC) $(CFLAGS) $(SRC) $(TESTS) -lm -o $@
+$(BIN): $(SRC) $(TEST) ../include/mconf.h ../include/mconf_config.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(SRC) $(TEST) $(LDFLAGS) -o $@
 
 clean:
-	rm -f test_all
+	rm -f $(BIN)

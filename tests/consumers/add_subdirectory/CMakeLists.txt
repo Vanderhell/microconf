@@ -1,0 +1,2 @@
+add_executable(microconf_add_subdirectory_consumer main.c)
+target_link_libraries(microconf_add_subdirectory_consumer PRIVATE microconf::microconf)

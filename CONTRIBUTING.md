@@ -1,20 +1,17 @@
-# Contributing to microconf
+# Contributing
 
-## Scope
+Contributions must preserve the project scope:
 
-In scope: bug fixes, documentation, test coverage, platform porting notes,
-performance improvements. Out of scope: dynamic allocation, JSON/YAML
-parsing, external dependencies, partial version migration.
+- C99 library core
+- caller-owned objects and buffers
+- zero heap allocation
+- no hidden mutable global state
+- no framework, parser, database, or runtime expansion
 
-## How to contribute
+Rules for changes:
 
-1. Open an issue first.
-2. Fork and branch (`fix/description` or `feat/description`).
-3. Write tests. All tests must pass with `-Wall -Wextra -Wpedantic -Werror`.
-4. Follow the code style: C99, 4-space indent, `mconf_` prefix, `const` correctness.
-5. Submit a PR referencing the issue.
-
-## License
-
-By contributing, you agree your contributions will be licensed under the
-MIT License.
+- Do not weaken validation or fault tests.
+- Keep public contracts explicit and documented.
+- Treat CRC as corruption detection only, never authentication.
+- Document ownership, callback recursion limits, and verification gaps.
+- Do not tag or publish releases except through an explicit requested release flow.

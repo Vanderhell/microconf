@@ -7,17 +7,32 @@ on:
   pull_request:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
+  linux-gcc-clang:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        c_standard: [99, 11]
+        names: [ON, OFF]
+        float_support: [ON, OFF]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_C_COMPILER=${{ matrix.cc }}
+          -DCMAKE_C_STANDARD=${{ matrix.c_standard }}
+          -DMCONF_CONFIG_ENABLE_NAMES=${{ matrix.names }}
+          -DMCONF_CONFIG_ENABLE_FLOAT=${{ matrix.float_support }}
+      - name: Build
+        run: cmake --build build --parallel
 
-      - name: Show toolchain
-        run: |
-          gcc --version
-          make --version
-
-      - name: Build and run tests
-        run: make -C tests
+  windows-msvc:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+      - name: Build
+        run: cmake --build build --config Release
