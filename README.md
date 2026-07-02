@@ -1,5 +1,11 @@
 # microconf
 
+[![CI](https://github.com/Vanderhell/microconf/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Vanderhell/microconf/actions/workflows/ci.yml?query=branch%3Amaster)
+[![Release](https://img.shields.io/github/v/release/Vanderhell/microconf)](https://github.com/Vanderhell/microconf/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![C99](https://img.shields.io/badge/language-C99-blue.svg)](#build)
+[![Docs](https://img.shields.io/badge/docs-verified-black.svg)](docs/VERIFICATION.md)
+
 `microconf` is a small C99 configuration library for caller-owned embedded data.
 It uses validated schemas, explicit default sizes, and a canonical two-slot
 storage format. It does not allocate memory, does not spawn threads, and does
