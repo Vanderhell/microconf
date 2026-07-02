@@ -1052,7 +1052,6 @@ static mconf_err_t mconf_load_slot_into_buffer(const mconf_t *ctx, const mconf_i
                 return err;
             }
             running_offset += sizeof(length_le);
-            crc = crc;
             mconf_crc32_update_byte(&crc, length_le[0]);
             mconf_crc32_update_byte(&crc, length_le[1]);
             length = mconf_read_u16_le(length_le);
