@@ -569,9 +569,11 @@ mconf_err_t mconf_find(const mconf_t *ctx, const char *key, size_t *index_out)
     if ((key == NULL) || (index_out == NULL)) {
         return MCONF_ERR_NULL;
     }
-    if (MCONF_ENABLE_NAMES == 0) {
+#if (MCONF_ENABLE_NAMES == 0)
+    (void)key;
+    (void)index_out;
         return MCONF_ERR_UNSUPPORTED;
-    }
+#endif
 
     for (index = 0; index < ctx->schema->entry_count; ++index) {
         const char *entry_key = mconf_entry_at(ctx, index)->key;
@@ -999,21 +1001,16 @@ static mconf_err_t mconf_decode_header(const uint8_t *header, mconf_record_info_
     return MCONF_OK;
 }
 
-static mconf_err_t mconf_load_slot_into_buffer(const mconf_t *ctx, const mconf_io_t *io, size_t slot_index, void *buffer, mconf_record_info_t *info_out, bool require_committed)
+static mconf_err_t mconf_probe_slot_header(const mconf_t *ctx, const mconf_io_t *io, size_t slot_index, bool require_committed, mconf_record_info_t *info_out)
 {
     uint8_t header[MCONF_STORAGE_HEADER_SIZE];
-    size_t payload_offset;
-    size_t running_offset;
-    size_t index;
-    uint32_t crc = 0xFFFFFFFFu;
     mconf_record_info_t info;
-    uint8_t *scratch = (uint8_t *)buffer;
-    uint8_t encoded[4];
     mconf_err_t err;
 
     if (((slot_index + 1u) * io->slot_size) > io->storage_size) {
         return MCONF_ERR_SIZE;
     }
+
     err = mconf_io_read_exact(io, slot_index * io->slot_size, header, sizeof(header));
     if (err != MCONF_OK) {
         return err;
@@ -1022,10 +1019,11 @@ static mconf_err_t mconf_load_slot_into_buffer(const mconf_t *ctx, const mconf_i
     if (err != MCONF_OK) {
         return err;
     }
-    if (((require_committed) && (info.state != MCONF_STORAGE_STATE_COMMITTED)) || (info.format_version != MCONF_STORAGE_FORMAT_VERSION)) {
+    if (((require_committed) && (info.state != MCONF_STORAGE_STATE_COMMITTED)) ||
+        ((!require_committed) && (info.state != MCONF_STORAGE_STATE_COMMITTED) && (info.state != MCONF_STORAGE_STATE_UNCOMMITTED))) {
         return MCONF_ERR_INVALID;
     }
-    if ((!require_committed) && (info.state != MCONF_STORAGE_STATE_UNCOMMITTED) && (info.state != MCONF_STORAGE_STATE_COMMITTED)) {
+    if (info.format_version != MCONF_STORAGE_FORMAT_VERSION) {
         return MCONF_ERR_INVALID;
     }
     if ((info.schema_version != ctx->schema->schema_version) || (info.schema_fingerprint != ctx->schema_fingerprint)) {
@@ -1036,6 +1034,28 @@ static mconf_err_t mconf_load_slot_into_buffer(const mconf_t *ctx, const mconf_i
     }
     if ((MCONF_STORAGE_HEADER_SIZE + info.payload_length) > io->slot_size) {
         return MCONF_ERR_SIZE;
+    }
+
+    if (info_out != NULL) {
+        *info_out = info;
+    }
+    return MCONF_OK;
+}
+
+static mconf_err_t mconf_load_slot_into_buffer(const mconf_t *ctx, const mconf_io_t *io, size_t slot_index, void *buffer, mconf_record_info_t *info_out, bool require_committed)
+{
+    size_t payload_offset;
+    size_t running_offset;
+    size_t index;
+    uint32_t crc = 0xFFFFFFFFu;
+    mconf_record_info_t info;
+    uint8_t *scratch = (uint8_t *)buffer;
+    uint8_t encoded[4];
+    mconf_err_t err;
+
+    err = mconf_probe_slot_header(ctx, io, slot_index, require_committed, &info);
+    if (err != MCONF_OK) {
+        return err;
     }
     payload_offset = slot_index * io->slot_size + MCONF_STORAGE_HEADER_SIZE;
     running_offset = payload_offset;
@@ -1137,27 +1157,32 @@ mconf_err_t mconf_load(mconf_t *ctx, const mconf_io_t *io)
     if ((io->slot_size < MCONF_STORAGE_HEADER_SIZE) || (io->storage_size < (io->slot_size * 2u))) {
         return MCONF_ERR_SIZE;
     }
-    {
-        uint8_t slot0_buffer[ctx->data_size];
-        uint8_t slot1_buffer[ctx->data_size];
 
-        slot0_err = mconf_load_slot_into_buffer(ctx, io, 0u, slot0_buffer, &slot0_info, true);
-        slot1_err = mconf_load_slot_into_buffer(ctx, io, 1u, slot1_buffer, &slot1_info, true);
+    slot0_err = mconf_probe_slot_header(ctx, io, 0u, true, &slot0_info);
+    slot1_err = mconf_probe_slot_header(ctx, io, 1u, true, &slot1_info);
 
-        if ((slot0_err == MCONF_OK) && (slot1_err == MCONF_OK)) {
-            if (mconf_generation_is_newer(slot1_info.generation, slot0_info.generation)) {
-                memmove(ctx->data, slot1_buffer, ctx->data_size);
-            } else {
-                memmove(ctx->data, slot0_buffer, ctx->data_size);
+    if ((slot0_err == MCONF_OK) && (slot1_err == MCONF_OK)) {
+        if (mconf_generation_is_newer(slot1_info.generation, slot0_info.generation)) {
+            if (mconf_load_slot_into_buffer(ctx, io, 1u, ctx->data, NULL, true) == MCONF_OK) {
+                return MCONF_OK;
             }
+            if (mconf_load_slot_into_buffer(ctx, io, 0u, ctx->data, NULL, true) == MCONF_OK) {
+                return MCONF_OK;
+            }
+        } else {
+            if (mconf_load_slot_into_buffer(ctx, io, 0u, ctx->data, NULL, true) == MCONF_OK) {
+                return MCONF_OK;
+            }
+            if (mconf_load_slot_into_buffer(ctx, io, 1u, ctx->data, NULL, true) == MCONF_OK) {
+                return MCONF_OK;
+            }
+        }
+    } else if (slot0_err == MCONF_OK) {
+        if (mconf_load_slot_into_buffer(ctx, io, 0u, ctx->data, NULL, true) == MCONF_OK) {
             return MCONF_OK;
         }
-        if (slot0_err == MCONF_OK) {
-            memmove(ctx->data, slot0_buffer, ctx->data_size);
-            return MCONF_OK;
-        }
-        if (slot1_err == MCONF_OK) {
-            memmove(ctx->data, slot1_buffer, ctx->data_size);
+    } else if (slot1_err == MCONF_OK) {
+        if (mconf_load_slot_into_buffer(ctx, io, 1u, ctx->data, NULL, true) == MCONF_OK) {
             return MCONF_OK;
         }
     }
@@ -1208,12 +1233,8 @@ mconf_err_t mconf_save(mconf_t *ctx, const mconf_io_t *io)
         return MCONF_ERR_SIZE;
     }
 
-    {
-        uint8_t slot0_buffer[ctx->data_size];
-        uint8_t slot1_buffer[ctx->data_size];
-        slot0_err = mconf_load_slot_into_buffer(ctx, io, 0u, slot0_buffer, &slot0_info, true);
-        slot1_err = mconf_load_slot_into_buffer(ctx, io, 1u, slot1_buffer, &slot1_info, true);
-    }
+    slot0_err = mconf_probe_slot_header(ctx, io, 0u, true, &slot0_info);
+    slot1_err = mconf_probe_slot_header(ctx, io, 1u, true, &slot1_info);
     if ((slot0_err == MCONF_OK) && (slot1_err == MCONF_OK)) {
         if (mconf_generation_is_newer(slot1_info.generation, slot0_info.generation)) {
             target_slot = 0u;
@@ -1253,10 +1274,7 @@ mconf_err_t mconf_save(mconf_t *ctx, const mconf_io_t *io)
     if (memcmp(verify_header, header, sizeof(header)) != 0) {
         return MCONF_ERR_IO;
     }
-    {
-        uint8_t verify_payload[ctx->data_size];
-        err = mconf_load_slot_into_buffer(ctx, io, target_slot, verify_payload, NULL, false);
-    }
+    err = mconf_load_slot_into_buffer(ctx, io, target_slot, ctx->data, NULL, false);
     if (err != MCONF_OK) {
         return err;
     }
